@@ -4,6 +4,7 @@
 import sys
 from run_function import *
 import csv
+import concurrent
 # main file
 # Our main file will be the control mechanism and part of creating more strategies according to the accuracy of the model.
 # we will test the whole pillars using this main function.
@@ -49,14 +50,27 @@ if __name__ == "__main__":
     with open(output_filepath, "w") as file:
         pass
 
-    filepath = sys.argv[1]
-    with open(filepath, 'r') as file:
-        for line in file:
-            if line == "\n":
-                pass
-            else:
-                print(line)
-                parameter_dictionary = {}
-                parameter_dictionary = eval(line)
-                main(parameter_dictionary, output_filepath)
-            
+    input_filepath = sys.argv[1]
+                
+    processes = []
+
+    # Using executor to master processes
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        # Reading test_100_epochs.txt and putting the dictionaries into the run function, and then putting the metrics from that into the output.txt
+        with open(input_filepath, 'r') as file:
+            for line in file:
+                if line.strip() == "":
+                    continue
+                else:
+                    # print(line.strip())
+                    parameter_dictionary = json.loads(line.strip())
+                    # self.helper(parameter_dictionary, output_filepath)
+                    processes.append(executor.submit(main, parameter_dictionary, output_filepath))
+                    
+        
+        # conclude the processes as they complete
+        for p in concurrent.futures.as_completed(processes):
+
+            try:
+                p.result()
+        
