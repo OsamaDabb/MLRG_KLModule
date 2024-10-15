@@ -109,7 +109,7 @@ def kl_module_function(data, truncation_parameter, highest_coeff, phenotype = No
             
             train_data = combined_data.iloc[:, train_indices]
             test_data = combined_data.iloc[:, test_indices]
-        else if binary_imported_normal is not None and binary_imported_scc is not None:
+        elif binary_imported_normal is not None and binary_imported_scc is not None:
             # Handle binary imported data
             # 'data' is already split into healthy and cancer datasets for imported data
             # Combine normal and SCC data into one DataFrame
