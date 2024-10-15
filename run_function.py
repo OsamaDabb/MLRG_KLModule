@@ -18,7 +18,7 @@ from binary_pipeline_functions import *
 
 # TODO: Make it so that you don't have to specify which train_folder exists. Make a while loop such that while there exists a train folder that exists, you check if train_folder + "_1" exists, and if not use it, else continue. Do same with test folder.
 def run_function(cancer_list, binary_boolean, image_boolean, 
-        TM_use, value, lin_int, noise, noise_type, 
+        TM_use, value, lin_int, noise, noise_type, kl_module, truncation_parameter, highest_coeff,
         augmentation, shear_factor, shear_prop, crop_scale_factor, crop_scale_prop, 
         flip_code, flip_prop, rotation_angle, rotate_prop,
         color_number, color_prop, blur_param, blur_prop,
@@ -33,11 +33,11 @@ def run_function(cancer_list, binary_boolean, image_boolean,
     else:
         augmentation_params = None
     # Similarly, make list of feature parameters if features is true
-    if features:
-        participation_factors = {'glcm_prop':glcm_prop, 'lbp_prop':lbp_prop, 'haralick_prop':haralick_prop}
-        #feature_params = {'glcm': {'distance': glcm_distance, 'angle': glcm_angle}, 'lbp': {'radius': lbp_radius, 'n_points': lbp_n_points}, 
-         #                 'gabor': {'orientations': gabor_orientations, 'scales': gabor_scales, 'bandwidth': gabor_bandwith}}
-        feature_params = {'glcm': {'distance': glcm_distance, 'angle': glcm_angle}, 'lbp': {'radius': lbp_radius}}
+    # if features:
+    participation_factors = {'glcm_prop':glcm_prop, 'lbp_prop':lbp_prop, 'haralick_prop':haralick_prop}
+    #feature_params = {'glcm': {'distance': glcm_distance, 'angle': glcm_angle}, 'lbp': {'radius': lbp_radius, 'n_points': lbp_n_points}, 
+        #                 'gabor': {'orientations': gabor_orientations, 'scales': gabor_scales, 'bandwidth': gabor_bandwith}}
+    feature_params = {'glcm': {'distance': glcm_distance, 'angle': glcm_angle}, 'lbp': {'radius': lbp_radius}}
 
     # Make the return dictionaries empty so we can append later
     params = None
@@ -83,7 +83,7 @@ def run_function(cancer_list, binary_boolean, image_boolean,
                 # for model in model_list:
                     # print(model)
                 params, metrics = binary_pipeline(data, phenotype, Machine, TM_use, value, enhanced_genes, lin_int,
-                                                    noise, noise_type)
+                                                    noise, noise_type, kl_module, truncation_parameter, highest_coeff)
                 print(f"Dataset {cancer} using machine {Machine} had parameters {params} and metrics {metrics}")
                 # TODO: This only returns the last cancer entered right now, have to fix that
                 # Fixed I think?
@@ -124,17 +124,32 @@ def run_function(cancer_list, binary_boolean, image_boolean,
                 raise ValueError("You must enter Image Data")
             
             # Makes the image dataframe, does augmentation if called in main
-            params = pipeline_image_df(folder1, folder2, augmentation, random_params = False, user_params=augmentation_params)
+            classes = {
+            'Normal': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/0_N',
+            'DCIS': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/1_PB',
+            'FEA': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/2_UDH',
+            'PB': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/3_FEA',
+            'IC': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/4_ADH',
+            'UDH': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/5_DCIS',
+            'ADH': '/projectnb/mlresearch/test/ani/cancer_2.0/data/Image/BRAC/BRACS_RoI/latest_version/train/6_IC'
+            }
+
+            params = pipeline_image_df(
+                classes=classes,
+                augmentation=False,
+                random_params=False,
+                user_params=augmentation_params,
+                num_images=None
+            )
+            # params = pipeline_image_df(folder1, folder2, augmentation, random_params = False, user_params=augmentation_params)
             
             # Runs the features on the image dataframe if called
             # if features:
                 # normal_df, scc_df, params = pipeline_features(normal_df, scc_df, participation_factors, params=feature_params)
             
             # Runs the machine pipeline on the dataframes on any given model type
-            if augmentation == True:
-                metrics = pipeline_machine(folder1 + "_augmented", folder2 + "_augmented", Machine, epochs=epochs, lr=lr, features = features)
-            else:
-                metrics = pipeline_machine(folder1+ "_temp", folder2 + "_temp", Machine, epochs=epochs, lr=lr, features = features, params = participation_factors)
+            # ??? No idea what's going on with this temp vs augmented folder stuff, we need to overhaul this so that it just chooses the train and test datasets from normal and cancer datasets
+            metrics = pipeline_machine(Machine, epochs=epochs, lr=lr, features = features, params = participation_factors)
             if features and augmentation:
                 params = {**augmentation_params, **feature_params}
             elif features:
@@ -157,4 +172,3 @@ def run_function(cancer_list, binary_boolean, image_boolean,
 #         glcm_distance = None, glcm_angle = None, lbp_radius = None, lbp_n_points = None, gabor_orientations = None, gabor_scales = None, gabor_bandwith = None)
 
     
-
